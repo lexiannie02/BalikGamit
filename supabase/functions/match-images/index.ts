@@ -20,26 +20,30 @@ Deno.serve(async (request) => {
 
   const groqKey = Deno.env.get("GROQ_API_KEY");
   const model = Deno.env.get("GROQ_MODEL") || "qwen/qwen3.8-27b";
-  if (!groqKey) return json({ error: "Image matching is not configured" }, 503);
+  if (!groqKey) return json({ error: "AI matching is not configured" }, 503);
 
   try {
     const body = await request.json();
     const lost = body?.lost || {};
     const reports = Array.isArray(body?.foundReports) ? body.foundReports.slice(0, 10) : [];
     const lostImageUrl = text(lost.image_url, 2000);
-    const candidates = reports.filter((report: Record<string, unknown>) => text(report.image_url, 2000));
-    if (!lostImageUrl || candidates.length === 0) return json({ matches: [], reason: "Both reports need photos for image comparison" });
-
-    const imageParts = [
-      { type: "text", text: `LOST ITEM PHOTO. Details: title=${text(lost.title, 120)}; category=${text(lost.category, 80)}; color=${text(lost.color, 50)}; description=${text(lost.description, 600)}` },
-      { type: "image_url", image_url: { url: lostImageUrl } },
-    ];
-    for (const report of candidates) {
-      imageParts.push({ type: "text", text: `FOUND ITEM PHOTO. report_id=${text(report.id, 80)}; title=${text(report.title, 120)}; category=${text(report.category, 80)}; color=${text(report.color, 50)}; description=${text(report.description, 600)}` } as never);
-      imageParts.push({ type: "image_url", image_url: { url: text(report.image_url, 2000) } } as never);
+    const candidates = reports.filter((report: Record<string, unknown>) => text(report.title, 120) || text(report.description, 600));
+    if ((!text(lost.title, 120) && !text(lost.description, 600)) || candidates.length === 0) {
+      return json({ matches: [], reason: "Written item details and found reports are needed for comparison" });
     }
-    imageParts.push({ type: "text", text: `Compare the lost photo with every found photo. Return JSON only in this exact shape: {"matches":[{"report_id":"string","score":0,"reasons":["short reason"]}]}.
-Score visual similarity and item identity, not ownership certainty. Use 0-100. Include only scores of 35 or higher, sort highest first, and give at most 5 results. Mention matching shape, color, brand, pattern, or distinctive marks when visible. Never claim certainty.` } as never);
+
+    const imageParts: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [
+      { type: "text", text: `LOST ITEM. title=${text(lost.title, 120)}; category=${text(lost.category, 80)}; color=${text(lost.color, 50)}; description=${text(lost.description, 600)}` },
+    ];
+    if (lostImageUrl) imageParts.push({ type: "image_url", image_url: { url: lostImageUrl } });
+    for (const report of candidates) {
+      imageParts.push({ type: "text", text: `FOUND ITEM. report_id=${text(report.id, 80)}; title=${text(report.title, 120)}; category=${text(report.category, 80)}; color=${text(report.color, 50)}; location=${text(report.location, 160)}; description=${text(report.description, 600)}` });
+      if (lostImageUrl && text(report.image_url, 2000)) {
+        imageParts.push({ type: "image_url", image_url: { url: text(report.image_url, 2000) } });
+      }
+    }
+    imageParts.push({ type: "text", text: `Compare the lost item's written description with every found report. Photos are optional: compare visual details only when both the lost and found reports include a photo. A text-only lost report is valid. Return JSON only in this exact shape: {"matches":[{"report_id":"string","score":0,"reasons":["short reason"]}]}.
+Score likely item identity, not ownership certainty. Use 0-100. Include only scores of 35 or higher, sort highest first, and give at most 5 results. Mention matching item type, color, brand, pattern, or distinctive marks when supported by the reports. Never claim certainty.` });
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -52,7 +56,7 @@ Score visual similarity and item identity, not ownership certainty. Use 0-100. I
         messages: [{ role: "user", content: imageParts }],
       }),
     });
-    if (!response.ok) return json({ error: "Image matching provider unavailable" }, 502);
+    if (!response.ok) return json({ error: "AI matching provider unavailable" }, 502);
 
     const result = await response.json();
     const content = result?.choices?.[0]?.message?.content;
@@ -70,6 +74,6 @@ Score visual similarity and item identity, not ownership certainty. Use 0-100. I
       .slice(0, 5) : [];
     return json({ matches });
   } catch (_error) {
-    return json({ error: "Could not compare the item images" }, 400);
+    return json({ error: "Could not compare the item reports" }, 400);
   }
 });

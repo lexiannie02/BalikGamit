@@ -40,17 +40,17 @@ Deno.serve(async (request) => {
     if (!(await verifyTurnstile(token))) return json({ error: "Security check failed" }, 400);
 
     const kind = clean(form.get("kind"), 10);
-    const title = clean(form.get("title"), 120);
+    const description = clean(form.get("description"), 1200);
+    const title = clean(form.get("title"), 120) || (kind === "lost" ? description.slice(0, 120) : "");
     const category = clean(form.get("category"), 80);
     const color = clean(form.get("color"), 50);
     const location = clean(form.get("location"), 160);
-    const reportDate = clean(form.get("date"), 10);
-    const description = clean(form.get("description"), 1200);
+    const reportDate = clean(form.get("date"), 10) || (kind === "lost" ? new Date().toISOString().slice(0, 10) : "");
     const visualType = clean(form.get("type"), 30) || "box";
     const visualLabel = clean(form.get("visualLabel"), 80);
     const displayName = clean(form.get("displayName"), 80) || "Anonymous helper";
 
-    if (!['lost', 'found'].includes(kind) || !title || !category || !color || !location || !reportDate || !description) {
+    if (!['lost', 'found'].includes(kind) || !title || !description || (kind === "found" && (!category || !color || !location || !reportDate))) {
       return json({ error: "Please complete the required report details" }, 400);
     }
 
@@ -81,7 +81,7 @@ Deno.serve(async (request) => {
     const insert = await supabase.from("reports").insert({
       kind,
       title,
-      category,
+      category: category || "Other",
       color,
       location,
       report_date: reportDate,
