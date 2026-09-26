@@ -30,6 +30,12 @@ function clean(value: FormDataEntryValue | null, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+async function hashToken(token: string) {
+  const bytes = new TextEncoder().encode(token);
+  const hash = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -81,6 +87,7 @@ Deno.serve(async (request) => {
       if (upload.error) return json({ error: "Could not store the report image" }, 502);
     }
 
+    const finderToken = kind === "found" ? `${crypto.randomUUID()}${crypto.randomUUID()}` : null;
     const insert = await supabase.from("reports").insert({
       kind,
       title,
@@ -92,6 +99,7 @@ Deno.serve(async (request) => {
       visual_type: visualType,
       visual_label: visualLabel || null,
       image_path: imagePath,
+      finder_secret_hash: finderToken ? await hashToken(finderToken) : null,
       display_name: displayName,
     }).select("id, kind, title, category, color, location, report_date, description, visual_type, visual_label, image_path, status, display_name, created_at").single();
 
@@ -106,7 +114,7 @@ Deno.serve(async (request) => {
       imageUrl = signed.data?.signedUrl || null;
     }
 
-    return json({ report: { ...insert.data, image_url: imageUrl } }, 201);
+    return json({ report: { ...insert.data, image_url: imageUrl }, finder_token: finderToken }, 201);
   } catch (_error) {
     return json({ error: "Invalid report request" }, 400);
   }

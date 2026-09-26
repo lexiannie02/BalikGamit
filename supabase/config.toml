@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.match-images]
 verify_jwt = false
+
+[functions.claim-actions]
+verify_jwt = false

@@ -22,7 +22,7 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const result = await supabase.from("reports")
-    .select("id, kind, title, category, color, location, report_date, description, visual_type, visual_label, image_path, status, display_name, created_at")
+    .select("id, kind, title, category, color, location, report_date, description, visual_type, visual_label, image_path, status, display_name, created_at, finder_secret_hash")
     .eq("kind", "found")
     .eq("status", "Active")
     .order("created_at", { ascending: false })
@@ -36,7 +36,8 @@ Deno.serve(async (request) => {
       const signed = await supabase.storage.from("report-images").createSignedUrl(report.image_path, 3600);
       imageUrl = signed.data?.signedUrl || null;
     }
-    return { ...report, image_url: imageUrl };
+    const { finder_secret_hash, ...publicReport } = report;
+    return { ...publicReport, image_url: imageUrl, claim_enabled: Boolean(finder_secret_hash) };
   }));
 
   return json({ reports });
