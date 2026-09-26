@@ -51,7 +51,7 @@ Score likely item identity, not ownership certainty. Use 0-100. Include only sco
       body: JSON.stringify({
         model,
         temperature: 0.1,
-        max_tokens: 1200,
+        max_tokens: 600,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: imageParts }],
       }),
