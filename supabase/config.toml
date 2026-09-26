@@ -2,3 +2,12 @@ project_id = "zwjphdvaitugjovkmwlq"
 
 [functions.turnstile-verify]
 verify_jwt = false
+
+[functions.report-submit]
+verify_jwt = false
+
+[functions.reports-list]
+verify_jwt = false
+
+[functions.match-images]
+verify_jwt = false
