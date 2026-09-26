@@ -2,5 +2,5 @@
   "name": "balikgamit",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "dev": "npx serve .", "start": "npx serve ." }
+  "scripts": { "dev": "npx serve .", "start": "npx serve .", "test": "node --test tests/*.test.cjs" }
 }
