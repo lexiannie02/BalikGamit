@@ -12,3 +12,4 @@ dist/
 # Local tooling files
 .DS_Store
 *.log
+supabase/.temp/
