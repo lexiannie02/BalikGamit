@@ -1,0 +1,6 @@
+{
+  "name": "balikgamit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "dev": "npx serve .", "start": "npx serve ." }
+}
