@@ -1,0 +1,4 @@
+project_id = "zwjphdvaitugjovkmwlq"
+
+[functions.turnstile-verify]
+verify_jwt = false
