@@ -49,9 +49,13 @@ Deno.serve(async (request) => {
     const visualType = clean(form.get("type"), 30) || "box";
     const visualLabel = clean(form.get("visualLabel"), 80);
     const displayName = clean(form.get("displayName"), 80) || "Anonymous helper";
+    const image = form.get("photo");
 
     if (!['lost', 'found'].includes(kind) || !title || !description || (kind === "found" && (!category || !color || !location || !reportDate))) {
       return json({ error: "Please complete the required report details" }, 400);
+    }
+    if (kind === "found" && !(image instanceof File && image.size > 0)) {
+      return json({ error: "Add a photo of the found item before submitting" }, 400);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -63,7 +67,6 @@ Deno.serve(async (request) => {
     });
 
     let imagePath: string | null = null;
-    const image = form.get("photo");
     if (image instanceof File && image.size > 0) {
       if (!image.type.startsWith("image/") || image.size > 8 * 1024 * 1024) {
         return json({ error: "Images must be under 8MB" }, 400);
